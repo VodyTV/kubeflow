@@ -69,6 +69,8 @@ type PodDefaultSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 
 	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
+
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // PodDefaultStatus defines the observed state of PodDefault

@@ -115,17 +115,22 @@ func safeToApplyPodDefaultsOnPod(pod *corev1.Pod, podDefaults []*settingsapi.Pod
 	}
 
 	var (
-		defaultAnnotations = make([]*map[string]string, len(podDefaults))
-		defaultLabels      = make([]*map[string]string, len(podDefaults))
+		defaultAnnotations  = make([]*map[string]string, len(podDefaults))
+		defaultLabels       = make([]*map[string]string, len(podDefaults))
+		defaultNodeSelector = make([]*map[string]string, len(podDefaults))
 	)
 	for i, pd := range podDefaults {
 		defaultAnnotations[i] = &pd.Spec.Annotations
 		defaultLabels[i] = &pd.Spec.Labels
+		defaultNodeSelector[i] = &pd.Spec.NodeSelector
 	}
 	if _, err := mergeMap(pod.Annotations, defaultAnnotations); err != nil {
 		errs = append(errs, err)
 	}
 	if _, err := mergeMap(pod.Labels, defaultLabels); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := mergeMap(pod.Spec.NodeSelector, defaultNodeSelector); err != nil {
 		errs = append(errs, err)
 	}
 	return utilerrors.NewAggregate(errs)
@@ -386,12 +391,14 @@ func applyPodDefaultsOnPod(pod *corev1.Pod, podDefaults []*settingsapi.PodDefaul
 	pod.Spec.Tolerations = tolerations
 
 	var (
-		defaultAnnotations = make([]*map[string]string, len(podDefaults))
-		defaultLabels      = make([]*map[string]string, len(podDefaults))
+		defaultAnnotations  = make([]*map[string]string, len(podDefaults))
+		defaultLabels       = make([]*map[string]string, len(podDefaults))
+		defaultNodeSelector = make([]*map[string]string, len(podDefaults))
 	)
 	for i, pd := range podDefaults {
 		defaultAnnotations[i] = &pd.Spec.Annotations
 		defaultLabels[i] = &pd.Spec.Labels
+		defaultNodeSelector[i] = &pd.Spec.NodeSelector
 		if pd.Spec.AutomountServiceAccountToken != nil {
 			pod.Spec.AutomountServiceAccountToken = pd.Spec.AutomountServiceAccountToken
 		}
@@ -410,6 +417,12 @@ func applyPodDefaultsOnPod(pod *corev1.Pod, podDefaults []*settingsapi.PodDefaul
 		klog.Error(err)
 	}
 	pod.ObjectMeta.Labels = labels
+
+	nodeSelector, err := mergeMap(pod.Spec.NodeSelector, defaultNodeSelector)
+	if err != nil {
+		klog.Error(err)
+	}
+	pod.Spec.NodeSelector = nodeSelector
 
 	for i, ctr := range pod.Spec.Containers {
 		applyPodDefaultsOnContainer(&ctr, podDefaults)
